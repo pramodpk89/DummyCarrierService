@@ -1,6 +1,6 @@
-FROM adoptopenjdk:17-jdk-hotspot as builder
+FROM amazoncorretto:17 as builder
 
-RUN apt-get update && apt-get install -y maven
+RUN yum install -y maven
 
 WORKDIR /app
 
@@ -12,7 +12,7 @@ COPY src ./src
 
 RUN mvn package -DskipTests
 
-FROM adoptopenjdk:17-jre-hotspot
+FROM amazoncorretto:17
 
 WORKDIR /app
 
