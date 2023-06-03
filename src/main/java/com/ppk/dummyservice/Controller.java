@@ -22,7 +22,7 @@ public class Controller {
 
     @GetMapping("/ping")
     public String ping() {
-        return "yes, yes I am there!";
+        return "yes, yes I am here!";
     }
 
     @PostMapping("/tracker")
