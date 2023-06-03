@@ -1,6 +1,13 @@
 FROM amazoncorretto:17 as builder
 
-RUN yum install -y maven
+RUN yum install -y wget tar gzip \
+    && wget https://archive.apache.org/dist/maven/maven-3/3.2.5/binaries/apache-maven-3.2.5-bin.tar.gz \
+    && tar xzf apache-maven-3.2.5-bin.tar.gz \
+    && mv apache-maven-3.2.5 /opt/maven \
+    && rm apache-maven-3.2.5-bin.tar.gz
+
+ENV MAVEN_HOME=/opt/maven
+ENV PATH=${MAVEN_HOME}/bin:${PATH}
 
 WORKDIR /app
 
