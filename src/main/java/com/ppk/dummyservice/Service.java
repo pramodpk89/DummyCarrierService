@@ -1,6 +1,8 @@
 package com.ppk.dummyservice;
 
 import com.ppk.dummyservice.model.DummyCarrierResponse;
+import com.ppk.dummyservice.model.request.CarrierRequest;
+import com.ppk.dummyservice.model.response.CarrierResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -24,11 +26,9 @@ public class Service {
         return "https://dummy-carrier.com:" + serverPort + "/tracking/" + trackingId;
     }
 
-    public Mono<DummyCarrierResponse> getTrackingDetails(String shipmentId, String requestId) {
-        String trackingId = generateTrackingId();
-        String trackingUrl = generateTrackingUrl(trackingId);
-        return Mono.just(new DummyCarrierResponse(shipmentId, requestId, trackingId, trackingUrl));
+    public Mono<CarrierResponse> getTrackingDetailsForShipment(CarrierRequest carrierRequest) {
+        String trackingId=generateTrackingId();
+        return Mono.just(new CarrierResponse("DUMMY_SHIPMENT_ID","DUMMY_REQUEST_ID",trackingId,generateTrackingUrl(trackingId)));
     }
-
 }
 

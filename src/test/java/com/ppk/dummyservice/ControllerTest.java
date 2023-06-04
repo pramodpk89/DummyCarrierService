@@ -1,60 +1,114 @@
 package com.ppk.dummyservice;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ppk.dummyservice.model.DummyCarrierResponse;
-import com.ppk.dummyservice.model.ShipmentRequest;
+import com.ppk.dummyservice.model.request.CarrierRequest;
+import com.ppk.dummyservice.model.response.CarrierResponse;
+import lombok.SneakyThrows;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
+import org.springframework.test.web.reactive.server.WebTestClient;
 import reactor.core.publisher.Mono;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
+import java.io.IOException;
 
-@WebMvcTest(Controller.class)
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.BDDMockito.given;
+
 public class ControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
-
-    @MockBean
+    @Mock
     private Service dummyCarrierService;
 
-    @Test
-    public void testPing() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.get("/dummyCarrier/ping"))
-                .andExpect(MockMvcResultMatchers.status().isOk())
-                .andExpect(MockMvcResultMatchers.content().string("yes, yes I am there!"));
+    @InjectMocks
+    private Controller controller;
+
+    private WebTestClient webTestClient;
+
+    @BeforeEach
+    public void setUp() {
+        MockitoAnnotations.initMocks(this);
+        webTestClient = WebTestClient.bindToController(controller).build();
     }
 
     @Test
-    public void testGetTrackingURL() throws Exception {
-        String shipmentId = "S123";
-        String requestId = "R123";
-        String trackingId = "T123";
-        String trackingUrl = "https://dummy-carrier.com/tracking/T123";
-        DummyCarrierResponse dummyCarrierResponse = new DummyCarrierResponse(shipmentId, requestId, trackingId, trackingUrl);
-
-        when(dummyCarrierService.getTrackingDetails(any(String.class), any(String.class)))
-                .thenReturn(Mono.just(dummyCarrierResponse));
-
-        ShipmentRequest shipmentRequest = new ShipmentRequest();
-        shipmentRequest.setShipmentId(shipmentId);
-        shipmentRequest.setReqId(requestId);
-
-        mockMvc.perform(MockMvcRequestBuilders.post("/dummyCarrier/tracker")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJsonString(shipmentRequest)))
-                .andExpect(MockMvcResultMatchers.status().isOk());
+    public void testPing() {
+        webTestClient.get().uri("/dummyCarrier/ping")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(String.class).isEqualTo("yes, yes I am here!");
     }
 
-    private String asJsonString(Object object) throws Exception {
+    @SneakyThrows
+    @Test
+    public void testGetTrackingDetails() {
+        String json = "{\n" +
+                "\t\"labelResponseOptions\": \"URL_ONLY\",\n" +
+                "\t\"requestedShipment\": {\n" +
+                "\t\t\"shipper\": {\n" +
+                "\t\t\t\"contact\": {\n" +
+                "\t\t\t\t\"personName\": \"SHIPPERNAME\",\n" +
+                "\t\t\t\t\"phoneNumber\": 1234567890,\n" +
+                "\t\t\t\t\"companyName\": \"ShipperCompanyName\"\n" +
+                "\t\t\t},\n" +
+                "\t\t\t\"address\": {\n" +
+                "\t\t\t\t\"addressLine1\": \"addressLine1\",\n" +
+                "\t\t\t\t\"state\": \"STATE\",\n" +
+                "\t\t\t\t\"postalCode\": 72601,\n" +
+                "\t\t\t\t\"countryCode\": \"US\"\n" +
+                "\t\t\t}\n" +
+                "\t\t},\n" +
+                "\t\t\"recipients\": [\n" +
+                "\t\t\t{\n" +
+                "\t\t\t\t\"contact\": {\n" +
+                "\t\t\t\t\t\"personName\": \"RECIPIENTNAME\",\n" +
+                "\t\t\t\t\t\"phoneNumber\": 1234567890,\n" +
+                "\t\t\t\t\t\"companyName\": \"RecipientCompanyName\"\n" +
+                "\t\t\t\t},\n" +
+                "\t\t\t\t\"address\": {\n" +
+                "\t\t\t\t\t\"addressLine1\": \"RECIPIENTSTREETLINE1\",\n" +
+                "\t\t\t\t\t\"state\": \"STATE\",\n" +
+                "\t\t\t\t\t\"postalCode\": 72601,\n" +
+                "\t\t\t\t\t\"countryCode\": \"US\"\n" +
+                "\t\t\t\t}\n" +
+                "\t\t\t}\n" +
+                "\t\t],\n" +
+                "\t\t\"shipDatestamp\": \"2021-06-30\",\n" +
+                "\t\t\"serviceType\": \"SMART_POST\",\n" +
+                "\t\t\"packagingType\": \"YOUR_PACKAGING\",\n" +
+                "\t\t\"pickupType\": \"DROPOFF_AT_FEDEX_LOCATION\"\n" +
+                "\t},\n" +
+                "\t\"accountNumber\": {\n" +
+                "\t\t\"value\": \"carrier1\"\n" +
+                "\t}\n" +
+                "}";  // Your JSON string here
+        CarrierRequest carrierRequest = jsonToCarrierRequest(json);
+        CarrierResponse carrierResponse = new CarrierResponse(); // Initialize your CarrierResponse object
+
+        given(dummyCarrierService.getTrackingDetailsForShipment(carrierRequest)).willReturn(Mono.just(new CarrierResponse("DUMMY","DUMMY","123","www.example.com/123")));
+
+        CarrierResponse actualResponse = webTestClient.post().uri("/dummyCarrier/tracker")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(Mono.just(carrierRequest), CarrierRequest.class)
+                .exchange()
+                .returnResult(CarrierResponse.class)
+                .getResponseBody()
+                .blockFirst();
+
+        assertEquals("123", actualResponse.getTrackingId());
+        assertEquals("www.example.com/123", actualResponse.getTrackingUrl());
+    }
+
+
+
+    private CarrierRequest jsonToCarrierRequest(String json) throws IOException {
         ObjectMapper objectMapper = new ObjectMapper();
-        return objectMapper.writeValueAsString(object);
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES,false);
+        return objectMapper.readValue(json, CarrierRequest.class);
     }
+
 }
